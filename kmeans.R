@@ -1,7 +1,14 @@
 # 加载必要的包
 library(ggplot2)
 library(scales)
+# Python
+epsilon = 1e-6
+rate_of_change = (tensor[..., 1:] - tensor[..., :-1]) / (tensor[..., :-1] + epsilon)
+seqmean=rate_of_change.mean(dim=-1, keepdim=True)
+seq_cented=rate_of_change-seqmean
+seq_cented=(tensor_data-seqmean)/seqmean
 
+# R
 # 生成一些随机数据
 data <- matrix(runif(200), ncol = 2)
 
