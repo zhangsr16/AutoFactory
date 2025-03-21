@@ -2,22 +2,19 @@
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader, TensorDataset
+import torch.nn.functional as F
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from skrebate import ReliefF
 
 # 生成示例数据集
 df = pd.read_excel('origin.xlsx', header=None)
 tensor = torch.tensor(df.to_numpy(), dtype=torch.float)
-# 创建一个形状为 (batch_size, in_channels, sequence_length*sequence_length) 的输入张量
+# 创建一个形状为 (batch_size, in_channels, sequence*sequence) 的输入张量
 tensor = tensor.T
 tensorseq = torch.stack((tensor, tensor + 1, tensor + 2, tensor + 3, tensor + 4, tensor + 5), axis=-1)
 TensorSeq = torch.stack((tensorseq, tensorseq + 1, tensorseq + 2, tensorseq + 3, tensorseq + 4, tensorseq + 5), axis=-1)
 
 # nn.Model
-# Conv: batch_size, in_channels, sequences...
+# Conv: batch_size, in_channels, sequence...
 conv1d = nn.Conv1d(in_channels=TensorSeq.shape[1], out_channels=TensorSeq.shape[1], kernel_size=2, stride=1)
 conv2d = nn.Conv2d(in_channels=TensorSeq.shape[1], out_channels=TensorSeq.shape[1], kernel_size=[2, 3], stride=1)
 # Pool
@@ -25,8 +22,11 @@ max_pool1d = nn.MaxPool1d(kernel_size=2, stride=1)
 max_pool2d = nn.MaxPool2d(kernel_size=[2, 3], stride=1)
 avg_pool2d = nn.AvgPool2d(kernel_size=[2, 3], stride=1)
 
-# Linear: batch_size, in_features
+# Linear: batch_size, ..., sequence
 linear = nn.Linear(in_features=tensorseq.shape[-1], out_features=tensorseq.shape[-1])
+# Norm: batch_size, in_channels, sequences...
+norm1d = nn.BatchNorm1d(num_features=tensorseq.shape[1])
+norm2d = nn.BatchNorm2d(num_features=tensorseq.shape[1])
 
 # RNN: batch_size, sequence, in_channels
 # input_size 是in_channels
@@ -34,9 +34,32 @@ linear = nn.Linear(in_features=tensorseq.shape[-1], out_features=tensorseq.shape
 # num_layers 是RNN的层数
 rnn = nn.RNN(input_size=tensorseq.shape[1], hidden_size=tensorseq.shape[1], num_layers=tensorseq.shape[-1],
              batch_first=True)
+# GRU
+gru = nn.GRU(input_size=tensorseq.shape[1], hidden_size=tensorseq.shape[1], num_layers=tensorseq.shape[-1],
+             batch_first=True)
 # LSTM
 lstm = nn.LSTM(input_size=tensorseq.shape[1], hidden_size=tensorseq.shape[1], num_layers=tensorseq.shape[-1],
                batch_first=True)
+
+# Attention: batch_size, sequence, in_channels
+multihead_attn = nn.MultiheadAttention(embed_dim=tensorseq.shape[1], num_heads=tensorseq.shape[1], batch_first=True)
+
+# Embedding: batch_size, sequence
+# num_embeddings 是factor数量
+# embedding_dim 是向量化维度
+embedding = nn.Embedding(num_embeddings=int(torch.max(tensorseq)), embedding_dim=int(torch.max(tensorseq)))
+
+# logist_binary
+relu = nn.ReLU()
+sigmoid = nn.Sigmoid()
+tanh = nn.Tanh()
+leaky_relu = nn.LeakyReLU(negative_slope=0.01)
+dropout = nn.Dropout(p=0.5)
+
+# criterion: batch_size, out_channels
+criterion = nn.CrossEntropyLoss()
+criterion = nn.MSELoss()
+criterion = nn.BCELoss()
 
 # forward
 # Conv
@@ -49,6 +72,9 @@ output_tensor = avg_pool2d(TensorSeq)
 
 # Linear
 output_tensor = linear(tensorseq)
+# Norm
+output_tensor = norm1d(tensorseq)
+output_tensor = norm2d(TensorSeq)
 
 # RNN
 # 初始化状态h0: num_layers, batch_size, hidden_size
@@ -56,20 +82,44 @@ h0 = torch.zeros(tensorseq.shape[-1], tensorseq.shape[0], tensorseq.shape[1])
 output_tensor, hn = rnn(tensorseq.permute(0, 2, 1), h0)
 output_tensor = output_tensor.permute(0, 2, 1)
 hn = hn.permute(1, 2, 0)
+# GRU
+output_tensor, hn = gru(tensorseq.permute(0, 2, 1), h0)
+output_tensor = output_tensor.permute(0, 2, 1)
+hn = hn.permute(1, 2, 0)
 # LSTM
-h0 = torch.zeros(tensorseq.shape[-1], tensorseq.shape[0], tensorseq.shape[1])
 c0 = torch.zeros(tensorseq.shape[-1], tensorseq.shape[0], tensorseq.shape[1])
 output_tensor, (hn, cn) = lstm(tensorseq.permute(0, 2, 1), (h0, c0))
+output_tensor = output_tensor.permute(0, 2, 1)
 hn = hn.permute(1, 2, 0)
 cn = cn.permute(1, 2, 0)
 
+# Attention
+output_tensor, attn_output_weights = multihead_attn(tensorseq.permute(0, 2, 1), tensorseq.permute(0, 2, 1),
+                                                    tensorseq.permute(0, 2, 1))
+output_tensor = output_tensor.permute(0, 2, 1)
 
-nn.BatchNorm1d(channel)
+# Embedding
+index_to_word = {idx: word for idx, word in enumerate(range(int(torch.max(tensorseq))))}
+output_tensor = embedding(tensorseq[0][0].int())
+# 将词向量还原为索引
+cosine_sim = F.cosine_similarity(output_tensor.unsqueeze(2), embedding.weight.T.unsqueeze(0).unsqueeze(0), dim=-1)
+# 找到相似度最高的索引
+_, closest_indices = cosine_sim.max(dim=-1)
+# 将索引还原为词
+output_words = [[index_to_word[idx.item()] for idx in sequence] for sequence in closest_indices]
 
-nn.ReLU
 
+# logist_binary
+output_relu = relu(output_tensor)
+output_sigmoid = sigmoid(output_tensor)
+output_tanh = tanh(output_tensor)
+output_leaky_relu = leaky_relu(output_tensor)
+output_dropout = dropout(output_tensor)
 
-
+# loss : input_tensor 的形状为 (batch_size, out_channels)
+# CrossEntropyLoss: target_tensor 的形状为 (batch_size)
+# BCELoss, MSELoss: target_tensor 的形状为 (batch_size, out_channels)
+loss = criterion(tensorseq, output_tensor)
 
 
 print(output_tensor.shape)
