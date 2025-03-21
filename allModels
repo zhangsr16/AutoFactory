@@ -1,0 +1,75 @@
+# https://betterexplained.com/articles/intuitive-convolution/
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader, TensorDataset
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from skrebate import ReliefF
+
+# 生成示例数据集
+df = pd.read_excel('origin.xlsx', header=None)
+tensor = torch.tensor(df.to_numpy(), dtype=torch.float)
+# 创建一个形状为 (batch_size, in_channels, sequence_length*sequence_length) 的输入张量
+tensor = tensor.T
+tensorseq = torch.stack((tensor, tensor + 1, tensor + 2, tensor + 3, tensor + 4, tensor + 5), axis=-1)
+TensorSeq = torch.stack((tensorseq, tensorseq + 1, tensorseq + 2, tensorseq + 3, tensorseq + 4, tensorseq + 5), axis=-1)
+
+# nn.Model
+# Conv: batch_size, in_channels, sequences...
+conv1d = nn.Conv1d(in_channels=TensorSeq.shape[1], out_channels=TensorSeq.shape[1], kernel_size=2, stride=1)
+conv2d = nn.Conv2d(in_channels=TensorSeq.shape[1], out_channels=TensorSeq.shape[1], kernel_size=[2, 3], stride=1)
+# Pool
+max_pool1d = nn.MaxPool1d(kernel_size=2, stride=1)
+max_pool2d = nn.MaxPool2d(kernel_size=[2, 3], stride=1)
+avg_pool2d = nn.AvgPool2d(kernel_size=[2, 3], stride=1)
+
+# Linear: batch_size, in_features
+linear = nn.Linear(in_features=tensorseq.shape[-1], out_features=tensorseq.shape[-1])
+
+# RNN: batch_size, sequence, in_channels
+# input_size 是in_channels
+# hidden_size 是隐藏层的特征数量
+# num_layers 是RNN的层数
+rnn = nn.RNN(input_size=tensorseq.shape[1], hidden_size=tensorseq.shape[1], num_layers=tensorseq.shape[-1],
+             batch_first=True)
+# LSTM
+lstm = nn.LSTM(input_size=tensorseq.shape[1], hidden_size=tensorseq.shape[1], num_layers=tensorseq.shape[-1],
+               batch_first=True)
+
+# forward
+# Conv
+output_tensor = conv1d(tensorseq)
+output_tensor = conv2d(TensorSeq)
+# Pool
+output_tensor = max_pool1d(tensorseq)
+output_tensor = max_pool2d(TensorSeq)
+output_tensor = avg_pool2d(TensorSeq)
+
+# Linear
+output_tensor = linear(tensorseq)
+
+# RNN
+# 初始化状态h0: num_layers, batch_size, hidden_size
+h0 = torch.zeros(tensorseq.shape[-1], tensorseq.shape[0], tensorseq.shape[1])
+output_tensor, hn = rnn(tensorseq.permute(0, 2, 1), h0)
+output_tensor = output_tensor.permute(0, 2, 1)
+hn = hn.permute(1, 2, 0)
+# LSTM
+h0 = torch.zeros(tensorseq.shape[-1], tensorseq.shape[0], tensorseq.shape[1])
+c0 = torch.zeros(tensorseq.shape[-1], tensorseq.shape[0], tensorseq.shape[1])
+output_tensor, (hn, cn) = lstm(tensorseq.permute(0, 2, 1), (h0, c0))
+hn = hn.permute(1, 2, 0)
+cn = cn.permute(1, 2, 0)
+
+
+nn.BatchNorm1d(channel)
+
+nn.ReLU
+
+
+
+
+
+print(output_tensor.shape)
