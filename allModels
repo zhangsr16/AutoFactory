@@ -4,6 +4,22 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pandas as pd
+import numpy as np
+import math
+from sklearn.semi_supervised import SelfTrainingClassifier
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier, export_text
+from sklearn.naive_bayes import GaussianNB
+from sklearn.mixture import GaussianMixture
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import BaggingClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.manifold import Isomap
+from metric_learn import LMNN
+from hmmlearn import hmm
+from sklearn.neural_network import BernoulliRBM
+from sklearn.metrics import accuracy_score
 
 # 生成示例数据集
 df = pd.read_excel('origin.xlsx', header=None)
@@ -55,6 +71,38 @@ sigmoid = nn.Sigmoid()
 tanh = nn.Tanh()
 leaky_relu = nn.LeakyReLU(negative_slope=0.01)
 dropout = nn.Dropout(p=0.5)
+
+# classifier
+# SVM
+base_svc = SVC(probability=True, kernel='rbf', gamma='scale', random_state=0)
+SVM_Classifier = SelfTrainingClassifier(base_svc, criterion='k_best', k_best=math.ceil(0.1 * tensorseq.shape[0]))
+# DecisionTree
+DecisionTree_Classifier = DecisionTreeClassifier(criterion='gini', max_depth=tensorseq.shape[-1], random_state=0)
+# NB
+NB_Classifier = GaussianNB()
+# EM_GaussianMixture
+EM_Classifier = GaussianMixture(n_components=2, random_state=0)
+# AdaBoost
+AdaBoost_Classifier = AdaBoostClassifier(n_estimators=tensorseq.shape[-1], random_state=0)
+# Bagged Decision Trees
+BagTrees_Classifier = BaggingClassifier(estimator=DecisionTree_Classifier, n_estimators=tensorseq.shape[-1],
+                                        random_state=0)
+# RF
+RF_Classifier = RandomForestClassifier(n_estimators=tensorseq.shape[-1], random_state=0)
+# kNN
+kNN_Classifier = KNeighborsClassifier(n_neighbors=2)
+
+# Manifold
+isomap_Manifold = Isomap(n_components=2, n_neighbors=2)
+
+# Metric
+LMNN_Metric = LMNN(k=2, learn_rate=1e-6)
+
+# States
+# GaussianHMM
+GaussianHMM = hmm.GaussianHMM(n_components=2, covariance_type="diag", n_iter=tensorseq.shape[-1], random_state=0)
+# BernoulliRBM
+GB_RBM = BernoulliRBM(n_components=2, learning_rate=0.01, n_iter=tensorseq.shape[-1], random_state=0)
 
 # criterion: batch_size, out_channels
 criterion = nn.CrossEntropyLoss()
@@ -108,7 +156,6 @@ _, closest_indices = cosine_sim.max(dim=-1)
 # 将索引还原为词
 output_words = [[index_to_word[idx.item()] for idx in sequence] for sequence in closest_indices]
 
-
 # logist_binary
 output_relu = relu(output_tensor)
 output_sigmoid = sigmoid(output_tensor)
@@ -116,10 +163,73 @@ output_tanh = tanh(output_tensor)
 output_leaky_relu = leaky_relu(output_tensor)
 output_dropout = dropout(output_tensor)
 
+# classifier
+# SVM
+# 将训练集中的一部分标签设置为 -1 表示未标记数据
+X_train = tensorseq.view(tensorseq.shape[0], -1)
+y_train = np.array([1, 1, 0, 0])
+y_train_unlabeled = np.array([1, 1, 0, -1])
+# SVM
+# partial label
+SVM_Classifier.fit(X_train, y_train_unlabeled)
+y_pred = SVM_Classifier.predict(X_train)
+# DecisionTree
+DecisionTree_Classifier.fit(X_train, y_train)
+y_pred = DecisionTree_Classifier.predict(X_train)
+rules = export_text(DecisionTree_Classifier)
+# NB
+NB_Classifier.fit(X_train, y_train)
+y_pred = NB_Classifier.predict(X_train)
+# EM
+# no label
+EM_Classifier.fit(X_train)
+y_pred = EM_Classifier.predict(X_train)
+# AdaBoost
+AdaBoost_Classifier.fit(X_train, y_train)
+y_pred = AdaBoost_Classifier.predict(X_train)
+# Bagged Decision Trees
+BagTrees_Classifier.fit(X_train, y_train)
+y_pred = BagTrees_Classifier.predict(X_train)
+# RF
+RF_Classifier.fit(X_train, y_train)
+y_pred = RF_Classifier.predict(X_train)
+# k-Nearest Neighbors
+kNN_Classifier.fit(X_train, y_train)
+y_pred = kNN_Classifier.predict(X_train)
+
+# Manifold: isomap
+# no label
+y_pred = isomap_Manifold.fit_transform(X_train)
+
+# Metric: LMNN transform
+LMNN_Metric.fit(X_train, y_train)
+X_train_lmnn = LMNN_Metric.transform(X_train)
+# 使用 k-NN 进行分类
+kNN_Classifier.fit(X_train_lmnn, y_train)
+y_pred = kNN_Classifier.predict(X_train)
+
+# HMM
+# no label
+GaussianHMM.fit(X_train)
+hidden_states = GaussianHMM.predict(X_train)
+
+# RBM
+GB_RBM.fit(X_train)
+hidden_layer = GB_RBM.transform(X_train)
+print("Hidden layer activations:")
+print(hidden_layer)
+print("Components (weights):")
+print(GB_RBM.components_)
+print("Intercepts of visible units:")
+print(GB_RBM.intercept_visible_)
+print("Intercepts of hidden units:")
+print(GB_RBM.intercept_hidden_)
+
+accuracy = accuracy_score(y_train, y_pred)
+
 # loss : input_tensor 的形状为 (batch_size, out_channels)
 # CrossEntropyLoss: target_tensor 的形状为 (batch_size)
 # BCELoss, MSELoss: target_tensor 的形状为 (batch_size, out_channels)
 loss = criterion(tensorseq, output_tensor)
-
 
 print(output_tensor.shape)
