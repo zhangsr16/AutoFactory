@@ -1,0 +1,76 @@
+层 1	层 2	层 3	层 4	层 5	层 6	层 7	层 8	层 9
+Algorithm	Rank							
+	Search							
+	Machine Learning Modelsradix	Labeled	Linear	k-Nearest Neighbors	predict is finding Neighbors			
+			Decision Tree	"Root Dataset, Branch Channel, Leaf Output"				
+				Recur to split	Information Gain	熵		
+					Gini Index	样本纯度		
+				Aggregation Base Models	Boosting	XGBoost		
+						More weight to Ambiguity Dataset		
+					Bagging	RF	Evaluate Channels Importance	
+						Avg predicts from Models		
+			Support Vector Machine	Semi-Supervised Support Vector Machine				
+				Where is Edge?	Kernel rad()	dim expand		
+					Support Vecotors	Nearest to Edge		
+			Bayes Classifier	Naive Bayes	H0: Channel isolated			
+				Bayesian Network	DAG of Channels			
+		Unlabed	classifier	Expectation-Maximization Algorithm	Parameters? When Expectation-Maximized			
+					Hidden Channels? When Parameters			
+				Hidden Markov Model	状态、观测、转移			
+					发生、发现概率			
+			squeeze	Manifold	Isomap	保留全局距离		
+					LLE	保留局部线性		
+					t-SNE	放大局部结构		
+				Metric	LMNN	优化近邻分类器		
+					ITML	最小化信息熵		
+					Contrastive Loss	对比正负样本		
+			概率图	Markov Random Field	Graph	Node		
+						Edge		
+						Weight		
+				Space Complex Evaluation	Probably Approximately Correct Learning	Learnable in Accuracy、Confidence		
+					Vapnik-Chervonenkis Dimension	Divide Dims		
+					Rademachar复杂度			
+		Channel Select	Filter	by statistic vars				
+			Wrapper	RFE recur select by special Models				
+			Embedded	"select by special Models, when Train"				
+		Agent	K-Game					
+		Models Explain	Decision Trees					
+			Apriori	associated channels				
+			Covering Algorithms	Repeated Incremental Pruning to Produce Error Reduction	降噪、平衡			
+		MLP	Neuron state	logistic sigmoid				
+			Regularization	L2				
+				Bagging				
+				Dropout				
+				Polyak Averaging	Update-Avg parameters			
+			lr_optimizer	Nesterov Momentum	deriving more after predicted-derivation			
+				Adaptive Gradient Algorithm				
+				Root Mean Square Propagation				
+				Adaptive Moment Estimation				
+				Gradient	recur deriving	Broyden-Fletcher-Goldfarb-Shanno		
+					Conjugate Gradient Method			
+			NN	CNN	conv			
+					pool			
+				RNN	Long Short-Term Memory			
+			PCA	FA				
+				自编码器				
+				表示学习	贪心			
+					迁移			
+					领域自适应			
+			sampling	Monte Carlo	statis low dim random distribution			
+				Gibbs	statis high dim random distribution			
+				Direct Allocation Function	statis weighted distribution			
+			infer	Calculus of Variations	"J(f(x))=Sum(F(x,f(x),f'(x)), by dx"			
+					"b(F,f(x))=d(b(F,f'(x),f(x))"			
+				Wake-Sleep Algorithm	Recognition Model use re-dataset produce Model			
+					Generative Model rebuild dataset			
+				Simulated Annealing	decrease solution space			
+			Struture	models	Boltzmann Machine	Deep Boltzmann Machine	Contrastive Divergence	Gibbs
+							Layer-wise Backpropagation	
+						Gaussian-Bernoulli Restricted Boltzmann Machine		
+						Deep Belief Networks	Neural Autoregressive Distribution Estimator	
+							Sigmoid Belief Network	
+					Discriminative Generative Stochastic Network	Generate Promotion Data to help Discriminate		
+			app	CV				
+				audio				
+				NLP	n-gram			
+Struture								
