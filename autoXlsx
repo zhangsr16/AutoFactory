@@ -1,0 +1,18 @@
+操作步骤1. 登录UI导入实时自定义导出任务，创建调度、创建导出目标，目的组选择创建的FTP数据源，输入必填值，其他配置均保持默认配置，有预期结果1					
+预期结果1. 调度及导出目标均创建成功，加密方式切换为不加密有提示“如果加密方式选择不加密，信息将以铭文形式显示。建议使用安全的加密方式”					
+	具体步骤				
+		1. 登录UI导入FTP数据源配置，有预期结果1	POST	ImportKafkaDataSource	
+				importFile	importFile2
+				./KafkaDataSourceTemplate.xls	./KafkaDataSourceTemplate.xls2
+		2. 有预期结果2	POST	Impo	
+				importFile	
+				./KafkaDataSourceTemplate.xls	
+		END			
+	具体结果				
+		预期结果1. 调度及导出目标均创建成功，加密方式切换为不加密有提示“如果加密方式选择不加密，信息将以铭文形式显示。建议使用安全的加密方式”	JSON	ImportKafkaDataSource	
+				ipValue	
+				20.0.0.1	
+		预期结果4. 加密字段从第二位显示为*，显示长度为4，小于2位显示为明文，小于5位的，从第二位开始到最后一位显示为*	JSON	Impo	
+				ipValue	ip
+				20.0.0.1	2.0.0.1
+		END			
