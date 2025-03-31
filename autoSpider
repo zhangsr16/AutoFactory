@@ -1,0 +1,12 @@
+安装
+1 pip install playwright
+失败了就换源
+2 playwright install
+这个要上外网下载大概率失败，先尝试一下顺便让它帮我们创建个文件夹
+3 如果上一步失败了，将chromium和winldd解压缩后，放置在
+C:\Users\用户名\AppData\Local\ms-playwright\* 路径下
+
+使用
+在命令行输入playwright codegen会打开浏览器窗口和控制窗口
+然后在浏览器里操作
+将控制窗口里的代码复制下来存到py文件中就可以运行了
