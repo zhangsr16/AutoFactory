@@ -6,9 +6,10 @@ def run(playwright: Playwright) -> None:
     page = browser.new_page()
     page.goto("https://www.gov.cn/zhengce/zuixin/home.htm")
     # /XPATH
-    element = page.query_selector('//html/body/div[3]/div/div/div[2]/div[1]/ul/li[1]/h4/a')
-    if element:
-        print(element.inner_text())
+    for i in range(1, 5):
+        element = page.query_selector('//html/body/div[3]/div/div/div[2]/div[1]/ul/li[' + str(i) + ']/h4/a')
+        if element:
+            print(element.inner_text())
     # ---------------------END
     browser.close()
 
